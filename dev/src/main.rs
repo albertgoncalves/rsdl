@@ -17,7 +17,7 @@ const WINDOW_HEIGHT: u32 = 768;
 const LIGHT_GRAY: Color = Color::RGB(245, 245, 245);
 const DARK_GRAY: Color = Color::RGB(40, 40, 40);
 
-const POINT_SPEED_INIT: f32 = 0.0;
+const SPEED_INIT: f32 = 0.0;
 const SPEED_INCREMENT: f32 = 0.0065;
 const TRAIL: f32 = 5.5;
 
@@ -153,8 +153,8 @@ fn main() {
             for o in &mut orbiters {
                 o.pos.x = pcg_32_bound(&mut rng, WINDOW_WIDTH) as f32;
                 o.pos.y = pcg_32_bound(&mut rng, WINDOW_HEIGHT) as f32;
-                o.speed.x = POINT_SPEED_INIT;
-                o.speed.y = POINT_SPEED_INIT;
+                o.speed.x = SPEED_INIT;
+                o.speed.y = SPEED_INIT;
             }
             state.reset_counter = 0;
         } else {
@@ -171,8 +171,8 @@ fn main() {
                 .draw_line(
                     Sdl2Point::new(o.pos.x as i32, o.pos.y as i32),
                     Sdl2Point::new(
-                        (o.pos.x + (o.speed.x * TRAIL)) as i32,
-                        (o.pos.y + (o.speed.y * TRAIL)) as i32,
+                        (o.pos.x - (o.speed.x * TRAIL)) as i32,
+                        (o.pos.y - (o.speed.y * TRAIL)) as i32,
                     ),
                 )
                 .unwrap();
