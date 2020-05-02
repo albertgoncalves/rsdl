@@ -1,0 +1,10 @@
+*
+!.gitignore
+!*.nix
+!shell
+!.shellhook
+!dev/
+!src/
+!*_lib/
+!*.toml
+!*.rs

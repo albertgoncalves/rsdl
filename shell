@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+
+if [ "$(uname -s)" = "Darwin" ]; then
+    nix-shell shell.nix --attr darwin
+else
+    if [ ! -d nixGL/ ]; then
+        git clone https://github.com/albertgoncalves/nixGL.git
+        (
+            cd nixGL/ || exit 1
+            printf \
+                "Which Linux machine is this?\n1) Ubuntu\n2) Manjaro\n1/2?: "
+            read -r selection
+            if [ "$selection" == "1" ]; then
+                driver_version=$(
+                    grep "X Driver" /var/log/Xorg.0.log \
+                        | sed 's/^.*X Driver  \(\S*\)\s*.*/\1/'
+                )
+                ./nvidiaInstall.py "$driver_version" nixGLNvidia
+            elif [ "$selection" == "2" ]; then
+                nix-build -A nixGLIntel
+            fi
+        )
+    fi
+    nix-shell shell.nix --attr linux
+fi
