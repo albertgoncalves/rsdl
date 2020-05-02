@@ -129,9 +129,12 @@ fn main() {
                 .unwrap();
         }
         canvas.present();
-        std::thread::sleep(Duration::from_nanos(
-            (NANOS_PER_FRAME - clock.elapsed().as_nanos()) as u64,
-        ));
+        let elapsed: u128 = clock.elapsed().as_nanos();
+        if elapsed < NANOS_PER_FRAME {
+            std::thread::sleep(Duration::from_nanos(
+                (NANOS_PER_FRAME - elapsed) as u64,
+            ));
+        }
         clock = Instant::now();
     }
 }
