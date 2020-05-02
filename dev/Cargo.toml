@@ -4,5 +4,13 @@ version = "0.1.0"
 edition = "2018"
 
 [dependencies]
-rand = "0.7.2"
 sdl2 = "0.33.0"
+
+[profile.dev]
+overflow-checks = false
+
+[profile.release]
+codegen-units = 1
+lto = "fat"
+overflow-checks = false
+panic = "abort"
