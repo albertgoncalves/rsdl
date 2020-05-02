@@ -34,6 +34,6 @@ rustup update
 export RUSTFLAGS="-C target-cpu=native"
 
 alias rustfmt="rustfmt -v"
-alias clippy="cargo clippy --all-targets -- -D warnings -W clippy::pedantic"
+alias clippy="cargo clippy --all-targets -- -D warnings -W clippy::all"
 
 set +e

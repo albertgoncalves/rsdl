@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2018"
 
 [dependencies]
-sdl2 = "0.33.0"
+sdl2 = { version = "0.34.0", features = ["gfx"] }
 
 [profile.dev]
 overflow-checks = false

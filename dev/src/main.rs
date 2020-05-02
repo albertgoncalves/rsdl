@@ -1,7 +1,7 @@
 use sdl2::event::Event;
+use sdl2::gfx::primitives::DrawRenderer;
 use sdl2::keyboard::Keycode;
 use sdl2::pixels::Color;
-use sdl2::rect::Point as Sdl2Point;
 use sdl2::render::{BlendMode, Canvas};
 use sdl2::video::Window;
 use sdl2::{EventPump, Sdl, VideoSubsystem};
@@ -16,16 +16,21 @@ const WINDOW_HEIGHT: u32 = 768;
 
 const LIGHT_GRAY: Color = Color::RGB(245, 245, 245);
 const DARK_GRAY: Color = Color::RGB(40, 40, 40);
+const TEAL: Color = Color::RGBA(45, 210, 195, 90);
+
+const LINE_WIDTH: u8 = 3;
+const RECT_PAD: i16 = 12;
 
 const SPEED_INIT: f32 = 0.0;
 const SPEED_INCREMENT: f32 = 0.0065;
-const TRAIL: f32 = 5.5;
+const TRAIL: f32 = 10.0;
 
 const FPS: u32 = 60;
 const NANOS_PER_FRAME: u64 = (1_000_000_000 / FPS) as u64;
-const RELOAD_FRAME_INTERVAL: u32 = FPS * 8;
+const RELOAD_FRAME_INTERVAL: u32 = FPS * 10;
 
 const SIZE: usize = 32;
+const SIZE_MINUS_1: usize = SIZE - 1;
 
 struct PcgRng {
     state: u64,
@@ -53,12 +58,10 @@ struct State {
     benchmark_counter: f32,
 }
 
-#[allow(clippy::cast_possible_wrap, clippy::cast_sign_loss)]
 fn negate_u32(x: u32) -> u32 {
     (-(x as i32)) as u32
 }
 
-#[allow(clippy::cast_possible_truncation)]
 fn pcg_32(rng: &mut PcgRng) -> u32 {
     let state: u64 = rng.state;
     rng.state = (state * 6_364_136_223_846_793_005) + (rng.increment | 1);
@@ -111,7 +114,69 @@ unsafe fn update(orbiters: &mut [Orbiter]) {
     }
 }
 
-#[allow(clippy::cast_precision_loss, clippy::cast_possible_truncation)]
+fn render(canvas: &mut Canvas<Window>, orbiters: &[Orbiter]) {
+    for o in orbiters.iter().take(SIZE_MINUS_1) {
+        canvas
+            .thick_line(
+                o.pos.x as i16,
+                o.pos.y as i16,
+                (o.pos.x - (o.speed.x * TRAIL)) as i16,
+                (o.pos.y - (o.speed.y * TRAIL)) as i16,
+                LINE_WIDTH,
+                LIGHT_GRAY,
+            )
+            .unwrap();
+    }
+    let o: &Orbiter = &orbiters[SIZE_MINUS_1];
+    let x: i16 = o.pos.x as i16;
+    let y: i16 = o.pos.y as i16;
+    let speed_x: i16 = x - ((o.speed.x * TRAIL) as i16);
+    let speed_y: i16 = y - ((o.speed.y * TRAIL) as i16);
+    let (a_x, b_x): (i16, i16) = {
+        if x < speed_x {
+            (x - RECT_PAD, speed_x + RECT_PAD)
+        } else {
+            (speed_x - RECT_PAD, x + RECT_PAD)
+        }
+    };
+    let (a_y, b_y): (i16, i16) = {
+        if y < speed_y {
+            (y - RECT_PAD, speed_y + RECT_PAD)
+        } else {
+            (speed_y - RECT_PAD, y + RECT_PAD)
+        }
+    };
+    canvas.box_(a_x, a_y, b_x, b_y, TEAL).unwrap();
+    canvas
+        .thick_line(x, y, speed_x, speed_y, LINE_WIDTH, LIGHT_GRAY)
+        .unwrap();
+}
+
+fn benchmark(state: &mut State) {
+    state.benchmark_elapsed += state.benchmark_clock.elapsed().as_secs_f32();
+    state.benchmark_clock = Instant::now();
+    state.benchmark_counter += 1.0;
+    if 1.0 < state.benchmark_elapsed {
+        print!(
+            "{:>8.2} fps\r",
+            state.benchmark_counter / state.benchmark_elapsed,
+        );
+        io::stdout().flush().unwrap();
+        state.benchmark_counter = 0.0;
+        state.benchmark_elapsed = 0.0;
+    }
+}
+
+fn sleep(state: &mut State) {
+    let frame_elapsed: u64 = state.frame_clock.elapsed().as_nanos() as u64;
+    if frame_elapsed < NANOS_PER_FRAME {
+        std::thread::sleep(Duration::from_nanos(
+            NANOS_PER_FRAME - frame_elapsed,
+        ));
+    }
+    state.frame_clock = Instant::now();
+}
+
 fn main() {
     let context: Sdl = sdl2::init().unwrap();
     let video: VideoSubsystem = context.video().unwrap();
@@ -165,38 +230,9 @@ fn main() {
         }
         canvas.set_draw_color(DARK_GRAY);
         canvas.clear();
-        canvas.set_draw_color(LIGHT_GRAY);
-        for o in &orbiters {
-            canvas
-                .draw_line(
-                    Sdl2Point::new(o.pos.x as i32, o.pos.y as i32),
-                    Sdl2Point::new(
-                        (o.pos.x - (o.speed.x * TRAIL)) as i32,
-                        (o.pos.y - (o.speed.y * TRAIL)) as i32,
-                    ),
-                )
-                .unwrap();
-        }
+        render(&mut canvas, &orbiters);
         canvas.present();
-        state.benchmark_counter += 1.0;
-        state.benchmark_elapsed +=
-            state.benchmark_clock.elapsed().as_secs_f32();
-        state.benchmark_clock = Instant::now();
-        if 1.0 < state.benchmark_elapsed {
-            print!(
-                "{:>8.2} fps\r",
-                state.benchmark_counter / state.benchmark_elapsed,
-            );
-            io::stdout().flush().unwrap();
-            state.benchmark_counter = 0.0;
-            state.benchmark_elapsed -= 1.0;
-        }
-        let frame_elapsed: u64 = state.frame_clock.elapsed().as_nanos() as u64;
-        if frame_elapsed < NANOS_PER_FRAME {
-            std::thread::sleep(Duration::from_nanos(
-                NANOS_PER_FRAME - frame_elapsed,
-            ));
-        }
-        state.frame_clock = Instant::now();
+        benchmark(&mut state);
+        sleep(&mut state);
     }
 }

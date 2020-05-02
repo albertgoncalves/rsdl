@@ -3,6 +3,7 @@ let
     shared = [
         rustup
         SDL2
+        SDL2_gfx
         shellcheck
     ];
     hook = ''
